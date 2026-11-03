@@ -1,5 +1,5 @@
 # Prepare dbt sur n'importe quel poste.
-# Usage (depuis K:\Bureau\zz3\BI\dbt) :
+# Usage (depuis le dossier du projet) :
 #   Set-ExecutionPolicy -Scope Process Bypass; . .\setup_dbt.ps1
 # Le point + espace au debut est obligatoire pour que le venv reste active.
 
