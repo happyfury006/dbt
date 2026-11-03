@@ -1,0 +1,8 @@
+{
+  "python.defaultInterpreterPath": "C:\\Users\\jusometgar\\AppData\\Local\\dbt_venv\\Scripts\\python.exe",
+  "dbt.dbtIntegration": "core",
+  "files.associations": {
+    "*.sql": "jinja-sql",
+    "*.yml": "jinja-yaml"
+  }
+}
