@@ -33,3 +33,7 @@ models:
   dbt_BI_zz3:
     silver:
       +materialized: view
+      +schema: silver
+    gold:
+      +materialized: table
+      +schema: gold

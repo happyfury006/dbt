@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 select
     customerid,
     upper(firstname)                            as firstname,
