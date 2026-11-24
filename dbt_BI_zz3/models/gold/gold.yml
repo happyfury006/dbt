@@ -1,0 +1,113 @@
+version: 2
+
+models:
+  - name: customer_revenu
+    description: "Nombre de commandes et revenu généré par client. Une ligne par client (clé : customerid), y compris les clients sans commande (revenu = 0)."
+    columns:
+      - name: customerid
+        description: "Identifiant unique du client"
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('customers')
+              field: customerid
+      - name: fullname
+        description: "Nom complet du client"
+      - name: nb_commandes
+        description: "Nombre de commandes distinctes passées par le client"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: revenu
+        description: "Somme des montants des lignes de commande du client"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: fact_orders
+    description: "Table de faits des commandes : nombre et montant total par client, employé, magasin et statut."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['customerid', 'employeeid', 'storeid', 'status']
+    columns:
+      - name: customerid
+        description: "Identifiant du client"
+        tests:
+          - not_null
+      - name: employeeid
+        description: "Identifiant de l'employé"
+        tests:
+          - not_null
+      - name: storeid
+        description: "Identifiant du magasin"
+        tests:
+          - not_null
+      - name: status
+        description: "Code statut de la commande"
+        tests:
+          - not_null
+      - name: status_description
+        description: "Libellé du statut"
+        tests:
+          - accepted_values:
+              values: ['En cours', 'Terminée', 'Annulée']
+      - name: nb_commandes
+        description: "Nombre de commandes distinctes"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 1
+      - name: total_commandes
+        description: "Montant total des commandes"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: orderitems_unique
+    description: "Lignes de commande dédoublonnées avec dbt_utils.deduplicate : une seule ligne par (orderid, productid), la plus récente selon updated_at."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['orderid', 'productid']
+    columns:
+      - name: orderid
+        description: "Identifiant de la commande"
+        tests:
+          - not_null
+      - name: orderitemid
+        description: "Numéro de la ligne conservée dans la commande"
+        tests:
+          - not_null
+      - name: productid
+        description: "Identifiant du produit"
+        tests:
+          - not_null
+      - name: quantity
+        description: "Quantité commandée"
+      - name: unitprice
+        description: "Prix unitaire du produit"
+      - name: updated_at
+        description: "Date de dernière mise à jour de la ligne conservée"
+
+  - name: store_performance
+    description: "Chiffre d'affaires de chaque magasin comparé à son objectif de ventes (seed salestarget). Une ligne par magasin (clé : storeid)."
+    columns:
+      - name: storeid
+        description: "Identifiant unique du magasin"
+        tests:
+          - unique
+          - not_null
+      - name: total_commandes
+        description: "Chiffre d'affaires réalisé par le magasin"
+        tests:
+          - not_null
+      - name: store_target
+        description: "Objectif de ventes du magasin"
+        tests:
+          - not_null
+      - name: ecart_target
+        description: "Écart à l'objectif : total_commandes - store_target (négatif = objectif non atteint)"
+      - name: taux_atteinte
+        description: "Taux d'atteinte de l'objectif : total_commandes / store_target (1 = 100 %)"

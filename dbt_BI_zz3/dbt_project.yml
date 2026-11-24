@@ -22,18 +22,49 @@ clean-targets:         # directories to be removed by `dbt clean`
   - "target"
   - "dbt_packages"
 
+# Variables globales : taux de conversion vers l'euro
+# Utilisation dans un modèle : {{ var('eur_rate_us') }}
+vars:
+  eur_rate_us: 0.89906    # US
+  eur_rate_uk: 1.1777     # UK
+  eur_rate_inde: 0.00926  # Inde
 
 # Configuring models
 # Full documentation: https://docs.getdbt.com/docs/configuring-models
+# Le schéma custom est utilisé tel quel grâce à macros/generate_schema_name.sql
+# (bronze, silver, gold... et non dbt_bi_zz3_silver).
+# Hooks : journal d'exécution dans training.dbt_execution_logs (macros/execution_logs.sql)
+on-run-start:
+  - "{{ create_execution_log_table() }}"
 
-# In this example config, we tell dbt to build all models in the example/
-# directory as views. These settings can be overridden in the individual model
-# files using the `{{ config(...) }}` macro.
 models:
   dbt_BI_zz3:
+    +pre-hook: "{{ log_model_execution('start') }}"
+    +post-hook: "{{ log_model_execution('end') }}"
+    bronze:
+      +materialized: view
+      +schema: bronze
     silver:
       +materialized: view
       +schema: silver
     gold:
       +materialized: table
       +schema: gold
+    training:
+      +materialized: table
+      +schema: training
+
+# Fichiers CSV de référence (dbt seed)
+seeds:
+  dbt_BI_zz3:
+    +schema: bronze
+    salestarget:
+      +column_types:
+        StoreID: int
+        SalesTarget: decimal(12,2)
+
+# Snapshots (SCD type 2)
+snapshots:
+  dbt_BI_zz3:
+    +target_schema: snapshots
+

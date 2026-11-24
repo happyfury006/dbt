@@ -1,0 +1,112 @@
+version: 2
+
+models:
+  - name: customers
+    description: "Clients nettoyés : prénom en majuscules et nom complet. Une ligne par client (clé : customerid)."
+    columns:
+      - name: customerid
+        description: "Identifiant unique du client"
+        tests:
+          - unique
+          - not_null
+      - name: firstname
+        description: "Prénom du client, en majuscules"
+        tests:
+          - not_null
+      - name: lastname
+        description: "Nom de famille du client"
+        tests:
+          - not_null
+      - name: fullname
+        description: "Nom complet : PRÉNOM + nom"
+        tests:
+          - not_null
+      - name: email
+        description: "Adresse e-mail du client"
+        tests:
+          - unique
+      - name: phone
+        description: "Numéro de téléphone du client"
+      - name: address
+        description: "Adresse postale du client"
+      - name: city
+        description: "Ville du client"
+      - name: state
+        description: "État / région du client"
+      - name: zipcode
+        description: "Code postal du client"
+      - name: updated_at
+        description: "Date de dernière mise à jour de la ligne source"
+
+  - name: orders
+    description: "Commandes enrichies du libellé de statut. Une ligne par commande (clé : orderid)."
+    columns:
+      - name: orderid
+        description: "Identifiant unique de la commande"
+        tests:
+          - unique
+          - not_null
+      - name: customerid
+        description: "Identifiant du client"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('customers')
+              field: customerid
+      - name: orderdate
+        description: "Date de la commande"
+        tests:
+          - not_null
+      - name: employeeid
+        description: "Identifiant de l'employé ayant traité la commande"
+        tests:
+          - not_null
+      - name: storeid
+        description: "Identifiant du magasin"
+        tests:
+          - not_null
+      - name: status
+        description: "Code statut : 01 = En cours, 02 = Terminée, 03 = Annulée"
+        tests:
+          - not_null
+      - name: status_description
+        description: "Libellé du statut de la commande"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['En cours', 'Terminée', 'Annulée']
+      - name: updated_at
+        description: "Date de dernière mise à jour de la ligne source"
+
+  - name: orders_items
+    description: "Lignes de commande avec le montant de la ligne (prix unitaire × quantité). Une ligne par ligne de commande source."
+    columns:
+      - name: orderid
+        description: "Identifiant de la commande"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('orders')
+              field: orderid
+      - name: productid
+        description: "Identifiant du produit"
+        tests:
+          - not_null
+      - name: unitprice
+        description: "Prix unitaire du produit"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: quantity
+        description: "Quantité commandée"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 1
+      - name: totalprice
+        description: "Montant de la ligne : unitprice × quantity"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: updated_at
+        description: "Date de dernière mise à jour de la ligne source"

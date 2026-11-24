@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: bronze_row_counts
+    description: >
+      Contrôle de volumétrie des tables du schéma bronze. Ne contient QUE les tables
+      dont le nombre de lignes est inférieur au seuil défini dans le modèle (dictionnaire thresholds).
+      Le modèle doit donc être vide : le test échoue dès qu'une table passe sous son seuil.
+    tests:
+      - dbt_expectations.expect_table_row_count_to_equal:
+          value: 0
+    columns:
+      - name: table_name
+        description: "Nom de la table bronze sous son seuil"
+      - name: record_count
+        description: "Nombre de lignes présentes dans la table"
+      - name: expected_count
+        description: "Seuil minimum de lignes attendu"

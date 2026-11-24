@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: profit_us
+    description: "Profit journalier des ventes US. Généré par la macro generate_profit_model, conversion USD → EUR avec var('eur_rate_us'). Une ligne par jour (clé : sales_date)."
+    columns: &profit_columns
+      - name: sales_date
+        description: "Date de vente"
+        tests:
+          - unique
+          - not_null
+      - name: total_quantity
+        description: "Quantité totale vendue sur la journée"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: total_revenue
+        description: "Chiffre d'affaires de la journée, en devise locale (arrondi à l'unité)"
+        tests:
+          - not_null
+      - name: total_cost
+        description: "Coût d'achat de la journée, en devise locale (arrondi à l'unité)"
+        tests:
+          - not_null
+      - name: total_profit
+        description: "Profit de la journée (revenu - coût), en devise locale (arrondi à l'unité)"
+        tests:
+          - not_null
+      - name: total_profit_eur
+        description: "Profit de la journée converti en euros (arrondi au centime)"
+        tests:
+          - not_null
+
+  - name: profit_uk
+    description: "Profit journalier des ventes UK. Généré par la macro generate_profit_model, conversion GBP → EUR avec var('eur_rate_uk'). Une ligne par jour (clé : sales_date)."
+    columns: *profit_columns
+
+  - name: profit_india
+    description: "Profit journalier des ventes Inde. Généré par la macro generate_profit_model, conversion INR → EUR avec var('eur_rate_inde'). Une ligne par jour (clé : sales_date)."
+    columns: *profit_columns

@@ -1,0 +1,298 @@
+version: 2
+
+sources:
+  # ---------------------------------------------------------------
+  # Source BRONZE : données brutes du système de ventes
+  # ---------------------------------------------------------------
+  - name: bronze
+    description: "Données brutes du système de ventes (clients, employés, fournisseurs, produits, magasins, commandes, lignes de commande), chargées telles quelles depuis la source opérationnelle."
+    schema: bronze
+    tables:
+      - name: customers
+        description: "Référentiel des clients. Une ligne par client (clé : customerid). Historisé par le snapshot customers_snapshot."
+        columns:
+          - name: customerid
+            description: "Identifiant unique du client"
+            tests:
+              - unique
+              - not_null
+          - name: firstname
+            description: "Prénom du client"
+            tests:
+              - not_null
+          - name: lastname
+            description: "Nom de famille du client"
+            tests:
+              - not_null
+          - name: email
+            description: "Adresse e-mail du client"
+            tests:
+              - unique
+              - not_null
+          - name: phone
+            description: "Numéro de téléphone du client"
+          - name: address
+            description: "Adresse postale du client"
+          - name: city
+            description: "Ville du client"
+          - name: state
+            description: "État / région du client"
+            tests:
+              - accepted_values:
+                  values: ['NY', 'CA', 'AZ', 'IL', 'TX']
+          - name: zipcode
+            description: "Code postal du client"
+          - name: updated_at
+            description: "Date de dernière mise à jour de la ligne (utilisée par le snapshot)"
+            tests:
+              - not_null
+
+      - name: employees
+        description: "Référentiel des employés. Une ligne par employé (clé : employeeid). Hiérarchie via managerid."
+        columns:
+          - name: employeeid
+            description: "Identifiant unique de l'employé"
+            tests:
+              - unique
+              - not_null
+          - name: firstname
+            description: "Prénom de l'employé"
+          - name: lastname
+            description: "Nom de famille de l'employé"
+          - name: email
+            description: "Adresse e-mail de l'employé"
+          - name: jobtitle
+            description: "Poste occupé"
+          - name: hiredate
+            description: "Date d'embauche"
+          - name: managerid
+            description: "Identifiant du manager (lui-même employé)"
+            tests:
+              - relationships:
+                  to: source('bronze', 'employees')
+                  field: employeeid
+          - name: address
+            description: "Adresse postale de l'employé"
+          - name: city
+            description: "Ville de l'employé"
+          - name: state
+            description: "État / région de l'employé"
+          - name: zipcode
+            description: "Code postal de l'employé"
+          - name: updated_at
+            description: "Date de dernière mise à jour de la ligne"
+
+      - name: products
+        description: "Catalogue produits. Une ligne par produit (clé : productid), rattaché à un fournisseur."
+        columns:
+          - name: productid
+            description: "Identifiant unique du produit"
+            tests:
+              - unique
+              - not_null
+          - name: name
+            description: "Nom du produit"
+            tests:
+              - not_null
+          - name: category
+            description: "Catégorie du produit"
+            tests:
+              - accepted_values:
+                  values: ['Beauty', 'Books', 'Clothing', 'Electronics', 'Foods', 'Home Decor', 'Sports', 'Toys']
+          - name: retailprice
+            description: "Prix de vente public"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 0
+          - name: supplierprice
+            description: "Prix d'achat fournisseur (doit être inférieur ou égal au prix de vente)"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 0
+          - name: supplierid
+            description: "Identifiant du fournisseur"
+            tests:
+              - not_null
+              - relationships:
+                  to: source('bronze', 'suppliers')
+                  field: supplierid
+          - name: updated_at
+            description: "Date de dernière mise à jour de la ligne"
+
+      - name: suppliers
+        description: "Référentiel des fournisseurs. Une ligne par fournisseur (clé : supplierid)."
+        columns:
+          - name: supplierid
+            description: "Identifiant unique du fournisseur"
+            tests:
+              - unique
+              - not_null
+          - name: suppliername
+            description: "Raison sociale du fournisseur"
+            tests:
+              - not_null
+          - name: contactperson
+            description: "Nom de la personne à contacter chez le fournisseur"
+          - name: email
+            description: "Adresse e-mail du fournisseur"
+          - name: phone
+            description: "Numéro de téléphone du fournisseur"
+          - name: address
+            description: "Adresse postale du fournisseur"
+          - name: city
+            description: "Ville du fournisseur"
+          - name: state
+            description: "État / région du fournisseur"
+          - name: zipcode
+            description: "Code postal du fournisseur"
+          - name: updated_at
+            description: "Date de dernière mise à jour de la ligne"
+
+      - name: stores
+        description: "Référentiel des magasins. Une ligne par magasin (clé : storeid)."
+        columns:
+          - name: storeid
+            description: "Identifiant unique du magasin"
+            tests:
+              - unique
+              - not_null
+          - name: storename
+            description: "Nom du magasin"
+            tests:
+              - not_null
+          - name: address
+            description: "Adresse du magasin"
+          - name: city
+            description: "Ville du magasin"
+          - name: state
+            description: "État / région du magasin"
+          - name: zipcode
+            description: "Code postal du magasin"
+          - name: email
+            description: "Adresse e-mail du magasin"
+          - name: phone
+            description: "Numéro de téléphone du magasin"
+          - name: updated_at
+            description: "Date de dernière mise à jour de la ligne"
+
+      - name: orders
+        description: "En-têtes de commande. Une ligne par commande (clé : orderid), passée par un client dans un magasin et traitée par un employé."
+        columns:
+          - name: orderid
+            description: "Identifiant unique de la commande"
+            tests:
+              - unique
+              - not_null
+          - name: orderdate
+            description: "Date de la commande"
+            tests:
+              - not_null
+          - name: customerid
+            description: "Identifiant du client ayant passé la commande"
+            tests:
+              - not_null
+              - relationships:
+                  to: source('bronze', 'customers')
+                  field: customerid
+          - name: employeeid
+            description: "Identifiant de l'employé ayant traité la commande"
+            tests:
+              - not_null
+              - relationships:
+                  to: source('bronze', 'employees')
+                  field: employeeid
+          - name: storeid
+            description: "Identifiant du magasin"
+            tests:
+              - not_null
+              - relationships:
+                  to: source('bronze', 'stores')
+                  field: storeid
+          - name: status
+            description: "Statut de la commande : 01 = En cours, 02 = Terminée, 03 = Annulée"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['01', '02', '03']
+          - name: updated_at
+            description: "Date de dernière mise à jour de la ligne"
+
+      - name: orderitems
+        description: "Lignes de commande. Une ligne par produit commandé (clé composée : orderid + orderitemid). Contient des doublons (orderid, productid), dédoublonnés dans gold.orderitems_unique."
+        tests:
+          # Clé primaire composée : orderitemid n'est unique qu'au sein d'une commande
+          - dbt_utils.unique_combination_of_columns:
+              combination_of_columns: ['orderid', 'orderitemid']
+        columns:
+          - name: orderid
+            description: "Identifiant de la commande"
+            tests:
+              - not_null
+              - relationships:
+                  to: source('bronze', 'orders')
+                  field: orderid
+          - name: orderitemid
+            description: "Numéro de la ligne dans la commande"
+            tests:
+              - not_null
+          - name: productid
+            description: "Identifiant du produit"
+            tests:
+              - not_null
+              - relationships:
+                  to: source('bronze', 'products')
+                  field: productid
+          - name: quantity
+            description: "Quantité commandée (strictement positive)"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 1
+          - name: unitprice
+            description: "Prix unitaire du produit au moment de la commande"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 0
+          - name: updated_at
+            description: "Date de dernière mise à jour de la ligne"
+
+  # ---------------------------------------------------------------
+  # Source TRAINING : ventes journalières par pays (devise locale)
+  # ---------------------------------------------------------------
+  - name: training
+    description: "Ventes journalières par pays, exprimées en devise locale."
+    schema: training
+    tables:
+      - name: sales_us
+        description: "Ventes journalières aux États-Unis, en USD. Une ligne par jour (clé : sales_date)."
+        columns: &sales_columns
+          - name: sales_date
+            description: "Date de vente (une ligne par jour)"
+            tests:
+              - unique
+              - not_null
+          - name: quantity_sold
+            description: "Quantité vendue sur la journée"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 0
+          - name: unit_sell_price
+            description: "Prix de vente unitaire (devise locale)"
+            tests:
+              - not_null
+          - name: unit_purchase_cost
+            description: "Coût d'achat unitaire (devise locale)"
+            tests:
+              - not_null
+
+      - name: sales_uk
+        description: "Ventes journalières au Royaume-Uni, en GBP. Une ligne par jour (clé : sales_date)."
+        columns: *sales_columns
+
+      - name: sales_india
+        description: "Ventes journalières en Inde, en INR. Une ligne par jour (clé : sales_date)."
+        columns: *sales_columns
